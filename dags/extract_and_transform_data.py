@@ -84,17 +84,17 @@ def query_transactions(s3_client):
     Query and Transformation #1: Summarization of August-2022 transactions.
     """
 
-    # SQL Query with pagination and summarization.
+    # SQL Query with pagination and summarizations.
     query = """
     SELECT
-      DATE(block_timestamp) as date,
-        COUNT(id) as num_transcations,
+        DATE(block_timestamp) as date,
+        COUNT(id) as num_transactions,
         SUM(CASE WHEN success=TRUE THEN 1 ELSE 0 END) as successful_transactions,
         ROUND(SUM(CASE WHEN success=TRUE THEN 1 ELSE 0 END) / COUNT(id), 4) as success_rate,
         COUNT(distinct sender) as distinct_sender,
         COUNT(distinct to_addr) as distinct_receivers,
-        ROUND(AVG(gas_limit * gas_price)/power(10, 12), 3) as gas_per_transaction_in_billions,
-        ROUND(AVG(amount)/power(10, 12), 3) as amount_per_transaction_in_billions,
+        ROUND(AVG(gas_limit * gas_price)/POWER(10, 12), 3) as avg_gas_price_in_billions,
+        ROUND(AVG(amount)/POWER(10, 12), 3) as avg_amount_in_billions,
     FROM public-data-finance.crypto_zilliqa.transactions
     WHERE DATE(block_timestamp) >= DATE(2022,08,01)
     AND DATE(block_timestamp) < DATE(2022,09,01)
@@ -144,7 +144,6 @@ def query_receivers(s3_client):
 
 
 def query_data():
-    # logging.basicConfig(level=logging.INFO)
 
     # Create file
     client = create_api_client()
