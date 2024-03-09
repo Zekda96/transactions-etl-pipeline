@@ -42,9 +42,8 @@ def load_data():
         endpoint_url='http://localstack:4566',
     )
 
-    files = ['most_active_wallets.parquet',
-             'daily_average_gas_price.parquet',
-             'transactions_success_rates.parquet']
+    files = ['transactions.parquet',
+             'receivers.parquet']
 
     for f in files:
         save_file_to_s3(s3, f)

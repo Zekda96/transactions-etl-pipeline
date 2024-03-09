@@ -78,24 +78,29 @@ def save_data_as_parquet(dataframe, filename):
     logging.info(f'Retrieved data saved on ./{filename}.parquet')
 
 
-def query_successful_transactions(s3_client):
+def query_transactions(s3_client):
     """
     Run query and save file locally.\n
-    Query and Transformation #1: Success rate of transactions in the last
-    10 days.
+    Query and Transformation #1: Summarization of August-2022 transactions.
     """
 
+    # SQL Query with pagination and summarization.
     query = """
     SELECT
       DATE(block_timestamp) as date,
-      COUNT(id) as transactions_no,
-      SUM(CASE WHEN success=TRUE THEN 1 ELSE 0 END) as successful_transactions,
-      ROUND(SUM(CASE WHEN success=TRUE THEN 1 ELSE 0 END) / COUNT(id), 4) as success_rate,
-    
+        COUNT(id) as num_transcations,
+        SUM(CASE WHEN success=TRUE THEN 1 ELSE 0 END) as successful_transactions,
+        ROUND(SUM(CASE WHEN success=TRUE THEN 1 ELSE 0 END) / COUNT(id), 4) as success_rate,
+        COUNT(distinct sender) as distinct_sender,
+        COUNT(distinct to_addr) as distinct_receivers,
+        ROUND(AVG(gas_limit * gas_price)/power(10, 12), 3) as gas_per_transaction_in_billions,
+        ROUND(AVG(amount)/power(10, 12), 3) as amount_per_transaction_in_billions,
     FROM public-data-finance.crypto_zilliqa.transactions
+    WHERE DATE(block_timestamp) >= DATE(2022,08,01)
+    AND DATE(block_timestamp) < DATE(2022,09,01)
     GROUP BY date
     ORDER BY date DESC
-    LIMIT 10;
+    LIMIT 31;
     """
 
     data = run_query(s3_client, query)
@@ -104,60 +109,37 @@ def query_successful_transactions(s3_client):
     # Set data type of date column
     df['date'] = pd.to_datetime(df['date'])
 
-    fn = 'transactions_success_rates'
+    fn = 'transactions'
     save_data_as_parquet(dataframe=df, filename=fn)
 
 
-def query_most_active_wallets(s3_client):
+def query_receivers(s3_client):
     """
     Run query and save file locally.\n
-    Query and Transformation #2: Top 10 wallets that received the most
-    transactions during a day.
+    Query and Transformation #2: Summarization of receiver addresses during
+    August-2022.
     """
 
-    date = ['2021', '09', '07']
-
-    query = f"""
-    SELECT to_addr, count(id) as transactions_no
-    FROM `public-data-finance.crypto_zilliqa.transactions`
-    WHERE DATE(block_timestamp) = DATE({date[0]},{date[1]},{date[2]}) 
-    AND success=true
-    GROUP BY to_addr
-    ORDER BY transactions_no DESC
-    LIMIT 10;
-    """
-
-    data = run_query(s3_client, query)
-    df = pd.DataFrame(data)
-
-    fn = 'most_active_wallets'
-    save_data_as_parquet(dataframe=df, filename=fn)
-
-
-def query_daily_avg_gas_price(s3_client):
-    """
-    Run query and save file locally.\n
-    Query and Transformation #3: Daily average gas price from last 10 days.
-    """
-
+    # SQL Query with pagination and summarization.
     query = f"""
     SELECT
-      DATE(block_timestamp) as date,
-      ROUND(AVG(gas_limit * gas_price)/power(10, 12), 3) as gas_per_transaction_in_billions
+      to_addr as receiver,
+      COUNT(id) as transactions_no,
+      ROUND(AVG(gas_limit * gas_price)/power(10, 12), 4) as avg_gas_in_billions,
+      ROUND(SUM(amount)/power(10, 12), 3) as received_in_billions,
     FROM `public-data-finance.crypto_zilliqa.transactions`
-    WHERE success=true
-    GROUP BY date
-    ORDER BY date DESC
-    LIMIT 10;
+    WHERE DATE(block_timestamp) >= DATE(2021,08,01)
+    AND DATE(block_timestamp) < DATE(2021,09,01)
+    AND success=true
+    GROUP BY receiver
+    ORDER BY transactions_no DESC
+    LIMIT 20;
     """
 
     data = run_query(s3_client, query)
     df = pd.DataFrame(data)
 
-    # Set data type of date column
-    df['date'] = pd.to_datetime(df['date'])
-
-    fn = 'daily_average_gas_price'
+    fn = 'receivers'
     save_data_as_parquet(dataframe=df, filename=fn)
 
 
@@ -168,6 +150,5 @@ def query_data():
     client = create_api_client()
 
     # Run queries and save file locally
-    query_successful_transactions(client)
-    query_most_active_wallets(client)
-    query_daily_avg_gas_price(client)
+    query_transactions(client)
+    query_receivers(client)

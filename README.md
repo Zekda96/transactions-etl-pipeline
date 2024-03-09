@@ -36,19 +36,24 @@ installed and a way to open .parquet files (i.e. [Tad](https://www.tadviewer.com
  ✔ Container airflow-airflow-triggerer-1  Started                                                                                                                17.1s 
  ✔ Container airflow-airflow-webserver-1  Started  
 ```
-Alternatively, 
-```
-build image
-```
 
 3. Open the Airflow GUI on http://localhost:8080/ and login
-with user `airflow` and password `airflow`. Wait for DAG `zilla-transactions-DAG`
-to start executing automatically.
+with user `airflow` and password `airflow`. If DAG `zilla-transactions-DAG`
+is paused, please unpause it and it should start executing automatically.
 
+4. Once the run has been marked with the `success` tag, you can check the 
+S3 Bucket on http://localhost:4566/zilliqa-transactions. It should have three
+files, each specified under a `<Contents>` tag:
+```pycon
+# ...
+<Contents>
+<Key>transactions.parquet</Key>
+# ...
+# ...
+<Contents>
+<Key>receivers.parquet</Key>
+```
 
-4. S3 Bucket on http://localhost:4566/zilliqa-transactions.
-
-5. Download parquet files on:
-- http://localhost:4566/zilliqa-transactions/daily_average_gas_price.parquet
-- http://localhost:4566/zilliqa-transactions/most_active_wallets.parquet
-- http://localhost:4566/zilliqa-transactions/transactions_success_rates.parquet
+5. Parquet files can be downloaded on:
+- http://localhost:4566/zilliqa-transactions/transactions.parquet
+- http://localhost:4566/zilliqa-transactions/receivers.parquet
