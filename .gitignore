@@ -1,4 +1,7 @@
 credentials/
+volume/
+plugins/
+logs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
