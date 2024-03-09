@@ -1,3 +1,9 @@
+![Python](https://img.shields.io/badge/Python-3670A0?style=flat-square&logo=python&labelColor=black&logoColor=ffdd54)
+![Docker](https://img.shields.io/badge/Docker-0db7ed.svg?style=flat-square&logo=docker&labelColor=black&logoColor=0db7ed)
+![Apache Airflow](https://img.shields.io/badge/Apache%20Airflow-017CEE?style=flat-square&logo=Apache%20Airflow&&labelColor=black&logoColor=white)
+![Google Cloud](https://img.shields.io/badge/Google%20Cloud-4285F4.svg?style=flat-square&logo=google-cloud&labelColor=black&logoColor=4285F4)
+![AWS](https://img.shields.io/badge/Amazon_AWS-FF9900?style=flat-square&logo=amazon-aws&labelColor=black&logoColor=FF9900)
+
 # ETL Pipeline - Crypto Transactions
 
 Python ETL Pipeline that pulls crypto transactions data from a 
@@ -17,33 +23,34 @@ on a [LocalStack S3 Bucket](https://docs.localstack.cloud/user-guide/aws/s3/).
 ## Features
 - Google BigQuery API 
 - SQL Queries
-- email notification on failure
+- E-mail notifications on retry/failure
 
 ## Setup
 Make sure to have [Docker Compose](https://docs.docker.com/compose/install/) 
-installed and a way to open .parquet files (i.e. [Tad](https://www.tadviewer.com/)).
+installed and that Docker Engine is running. Also, a way to open .parquet files 
+is recommended (i.e. [Tad](https://www.tadviewer.com/)).
 
-1. Place the credentials file provided on `./credentials/`.
+1. Place the credentials file provided at `./credentials/`.
 
 2. From the project directory, build and run the app by running `docker-compose up -d`
 ```pycon
 [+] Running 6/7
- ⠦ Network airflow_default                Created                                                                                                                17.7s 
- ✔ Container localstack                   Started                                                                                                                 1.0s 
- ✔ Container airflow-postgres-1           Healthy                                                                                                                 6.5s 
- ✔ Container airflow-airflow-init-1       Exited                                                                                                                  6.6s 
- ✔ Container airflow-airflow-scheduler-1  Started                                                                                                                17.2s 
- ✔ Container airflow-airflow-triggerer-1  Started                                                                                                                17.1s 
+ ⠦ Network airflow_default                Created
+ ✔ Container localstack                   Started
+ ✔ Container airflow-postgres-1           Healthy
+ ✔ Container airflow-airflow-init-1       Exited
+ ✔ Container airflow-airflow-scheduler-1  Started
+ ✔ Container airflow-airflow-triggerer-1  Started
  ✔ Container airflow-airflow-webserver-1  Started  
 ```
 
 3. Open the Airflow GUI on http://localhost:8080/ and login
-with user `airflow` and password `airflow`. If DAG `zilla-transactions-DAG`
-is paused, please unpause it and it should start executing automatically.
+with user `airflow` and password `airflow`. If DAG `zilliqa-transactions-DAG`
+is paused, please unpause it and it should shortly start executing.
 
 4. Once the run has been marked with the `success` tag, you can check the 
-S3 Bucket on http://localhost:4566/zilliqa-transactions. It should have three
-files, each specified under a `<Contents>` tag:
+S3 Bucket on http://localhost:4566/zilliqa-transactions. It should have two
+.parquet files, each specified under a `<Contents>` tag:
 ```pycon
 # ...
 <Contents>
@@ -54,6 +61,19 @@ files, each specified under a `<Contents>` tag:
 <Key>receivers.parquet</Key>
 ```
 
-5. Parquet files can be downloaded on:
+5. Parquet files can be downloaded from:
 - http://localhost:4566/zilliqa-transactions/transactions.parquet
 - http://localhost:4566/zilliqa-transactions/receivers.parquet
+
+6. The container can be terminated by running `docker-compose down`.
+
+[//]: # (### Production Architecture)
+
+[//]: # ()
+[//]: # (`High level system architecture diagram of the infrastructure to run this in)
+
+[//]: # (production/`)
+
+[//]: # (The project could be scaled)
+
+[//]: # (Edge cases worth mentioning:)
