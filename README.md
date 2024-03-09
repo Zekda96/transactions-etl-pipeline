@@ -32,7 +32,7 @@ is recommended (i.e. [Tad](https://www.tadviewer.com/)).
 
 1. Place the credentials file provided at `./credentials/`.
 
-2. From the project directory, build and run the app by running `docker-compose up -d`
+2. From the project directory, build and run the app by running `docker-compose up -d`.
 ```pycon
 [+] Running 6/7
  ⠦ Network airflow_default                Created
@@ -67,6 +67,28 @@ S3 Bucket on http://localhost:4566/zilliqa-transactions. It should have two
 
 6. The container can be terminated by running `docker-compose down`.
 
+## Dataset Break-down
+The pipeline extracts data from a crypto transactions table via
+Google BigQuery's API. The data is transformed using SQL queries that performed
+summarizations in the following form:
+````
+Table 1
+- Daily metrics for August 2022 
+   - Number of Transactions
+   - Successful Transactions
+   - Success Rate
+   - Unique Senders
+   - Unique Receivers
+   - Average cost of gas
+   - Average amount sent 
+````
+````
+Table 2
+- August 2022 metrics for top 20 addresses with most transactions received
+   - Number of Transactions
+   - Average cost of gas
+   - Total amount received
+````
 [//]: # (### Production Architecture)
 
 [//]: # ()
