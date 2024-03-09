@@ -20,6 +20,7 @@ default_args = {
     'email_on_retry': True,
 }
 
+# Schedule interval is set to '@once' so the DAG runs automatically on start.
 yesterday = datetime.now() - timedelta(days=1)
 print(yesterday)
 
@@ -31,11 +32,13 @@ with DAG(
     start_date=yesterday,
 ) as dag:
 
+    # Task #1: Extract and Transform data
     query_data = PythonOperator(
         task_id='query_data',
         python_callable=query_data,
     )
 
+    # Task #2: Load to bucket
     load_data = PythonOperator(
         task_id='load_data',
         python_callable=load_data,
