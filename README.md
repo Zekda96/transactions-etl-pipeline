@@ -30,9 +30,13 @@ Make sure to have [Docker Compose](https://docs.docker.com/compose/install/)
 installed and that Docker Engine is running. Also, a way to open .parquet files 
 is recommended (i.e. [Tad](https://www.tadviewer.com/)).
 
-1. Place the credentials file provided at `./credentials/`.
+1. Clone the repository
+```
+git clone https://github.com/Zekda96/transactions-etl-pipeline.git
+```
+2. Create a folder named `credentials` in the project directory and place the credentials file there.
 
-2. From the project directory, build and run the app by running `docker-compose up -d`.
+3. From the project directory, build the container by running `docker-compose up -d`.
 ```pycon
 [+] Running 6/7
  ⠦ Network airflow_default                Created
@@ -44,11 +48,11 @@ is recommended (i.e. [Tad](https://www.tadviewer.com/)).
  ✔ Container airflow-airflow-webserver-1  Started  
 ```
 
-3. Open the Airflow GUI on http://localhost:8080/ and login
+4. Open the Airflow GUI on http://localhost:8080/ and login
 with user `airflow` and password `airflow`. If DAG `zilliqa-transactions-DAG`
 is paused, please unpause it and it should shortly start executing.
 
-4. Once the run has been marked with the `success` tag, you can check the 
+5. Once the run has been marked with the `success` tag, you can check the 
 S3 Bucket on http://localhost:4566/zilliqa-transactions. It should have two
 .parquet files, each specified under a `<Contents>` tag:
 ```pycon
@@ -61,11 +65,11 @@ S3 Bucket on http://localhost:4566/zilliqa-transactions. It should have two
 <Key>receivers.parquet</Key>
 ```
 
-5. Parquet files can be downloaded from:
+6. Parquet files can be downloaded from:
 - http://localhost:4566/zilliqa-transactions/transactions.parquet
 - http://localhost:4566/zilliqa-transactions/receivers.parquet
 
-6. The container can be terminated by running `docker-compose down`.
+7. The container can be terminated by running `docker-compose down`.
 
 ## Dataset Breakdown
 The pipeline extracts data from a crypto transactions table via
