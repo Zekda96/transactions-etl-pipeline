@@ -67,7 +67,7 @@ S3 Bucket on http://localhost:4566/zilliqa-transactions. It should have two
 
 6. The container can be terminated by running `docker-compose down`.
 
-## Dataset Break-down
+## Dataset Breakdown
 The pipeline extracts data from a crypto transactions table via
 Google BigQuery's API. The data is transformed using SQL queries that performed
 summarizations in the following form:
