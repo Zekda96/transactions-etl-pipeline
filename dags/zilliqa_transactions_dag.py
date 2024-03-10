@@ -1,3 +1,8 @@
+"""
+Airflow Pipeline that extracts crypto transactions data,
+transforms it and stores it in a LocalStack S3 bucket.
+"""
+
 # Utils
 from datetime import timedelta, datetime
 
@@ -22,7 +27,6 @@ default_args = {
 
 # Schedule interval is set to '@once' so the DAG runs automatically on start.
 yesterday = datetime.now() - timedelta(days=1)
-print(yesterday)
 
 with DAG(
     dag_id='zilliqa-transactions-DAG',
