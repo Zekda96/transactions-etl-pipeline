@@ -89,7 +89,7 @@ Table 2
    - Average cost of gas
    - Total amount received
 ````
-### Production Architecture
+## Production Architecture
 Actions performed in this pipeline such as storing a file locally
 or using LocalStack are restricted to development environments
 and have to be replaced for production. The project could be scaled
