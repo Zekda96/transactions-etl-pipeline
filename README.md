@@ -92,8 +92,8 @@ Table 2
 ### Production Architecture
 Actions performed in this pipeline such as storing a file locally
 or using LocalStack are restricted to development environments
-and have to be replaced for production. The project can be scaled
-and used in production by using scalable and modular cloud infrastructure
+and have to be replaced for production. The project could be scaled
+and used in production by using modular cloud infrastructure
 services such as Data Lakes (AWS S3, Azure Blob Storage, Google Cloud Storage)
 Data Warehouses (Redshift, Databricks, Google BigQuery) and serverless
 FaaS (AWS Lambda, Google Cloud Functions).
