@@ -11,7 +11,8 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 
 # Tasks
-from extract_and_transform_data import query_data
+from extract_data import extract_data
+from transform_data import transform_data
 from load_data import load_data
 
 default_args = {
@@ -36,16 +37,22 @@ with DAG(
     start_date=yesterday,
 ) as dag:
 
-    # Task #1: Extract and Transform data
-    query_data = PythonOperator(
-        task_id='query_data',
-        python_callable=query_data,
+    # Task #1: Extract data using BigQuery API
+    extract_data = PythonOperator(
+        task_id='extract_data',
+        python_callable=extract_data,
     )
 
-    # Task #2: Load to bucket
+    # Task #2: Transform data
+    transform_data = PythonOperator(
+        task_id='transform_data',
+        python_callable=transform_data,
+    )
+
+    # Task #2: Load data to bucket
     load_data = PythonOperator(
         task_id='load_data',
         python_callable=load_data,
     )
 
-    query_data >> load_data
+    extract_data >> transform_data >> load_data
