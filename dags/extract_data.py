@@ -21,6 +21,7 @@ def create_api_client():
     :return: BigQuery Client used to send queries.
     """
 
+    # credentials_file_path = "airflow/transactions-etl/credentials/gcp_bigquery_credentials.json"
     credentials_file_path = "./credentials/gcp_bigquery_credentials.json"
 
     # Read credentials file
@@ -87,10 +88,9 @@ def create_db(table: str):
     """
 
     db_connection = sqlite3.connect('zilliqa.db')
-
     cursor = db_connection.cursor()
-    query = f"""
 
+    query = f"""
     CREATE TABLE {table} (
     id TEXT PRIMARY KEY,
     block_timestamp DATETIME,
@@ -103,6 +103,9 @@ def create_db(table: str):
     );
     """
     cursor.execute(query)
+
+    cursor.close()
+
     return db_connection
 
 
@@ -126,47 +129,57 @@ def pull_data_to_db(google_client: bigquery.Client,
     # This reduces memory usage by only loading `page_size` rows at a time and
     # then data can be efficiently transformed using SQL queries.
 
-    while True:
+    query = f"""
+    SELECT id, block_timestamp,
+    sender, to_addr,
+    gas_limit, gas_price,
+    amount, success,
+    FROM public-data-finance.crypto_zilliqa.transactions
+    WHERE DATE(block_timestamp) >= DATE(2022,08,01)
+    --WHERE DATE(block_timestamp) >= DATE(2022,09,07)
+    """
 
-        query = f"""
-        SELECT id, block_timestamp,
-        sender, to_addr,
-        gas_limit, gas_price,
-        amount, success
-        FROM public-data-finance.crypto_zilliqa.transactions
-        WHERE DATE(block_timestamp) >= DATE(2022,09,07)
-        LIMIT {page_size}
-        OFFSET {page_num * page_size};
-        """
+    try:
+        print(f'Running query - page {page_num}')
+        logging.info(f'Running query - page {page_num}')
+        # data = run_query(google_client, query)
 
-        try:
-            logging.info(f'Running query - page {page_num}')
-            data = run_query(google_client, query)
-            total_data += len(data)
-            logging.info(f'Ran successfully - returning {len(data)} rows'
+        print('job=client.query(query')
+        job = google_client.query(query)
+
+        print(f'result = job.result(page_size={page_size})')
+        result = job.result(page_size=page_size)
+        print('Start iterable')
+        for df in result.to_dataframe_iterable():
+            # df will have at most `page_size` rows
+            total_data += len(df)
+            logging.info(f'Ran successfully - returning {len(df)} rows'
                          f'\nTotal: {total_data}')
+            print(f'Ran successfully - returning {len(df)} rows'
+                  f'\nTotal: {total_data}')
 
-        except Exception as e:
-            logging.error(f'Error in query.')
-            raise e
+            df['amount'] = pd.to_numeric(df['amount'])
 
-        if not data:
-            logging.info(f'Query returned empty list. Ending extraction.')
-            break
+            # Save DataFrame to SQLite database
+            df.to_sql(table, con=sql_connection, if_exists='append',
+                      index=False)
+    except Exception as e:
+        logging.error(f'Error in query.')
+        raise e
 
-        # Insert data into a SQLite database
-        logging.info(f'Saving to database.')
-
-        # Load rows data into a DataFrame
-        df = pd.DataFrame(data)
-
-        # Fix numeric type to 'amount' column
-        df['amount'] = pd.to_numeric(df['amount'])
-
-        # Save DataFrame to SQLite database
-        df.to_sql(table, con=sql_connection, if_exists='append', index=False)
-
-        page_num += 1
+    # # Insert data into a SQLite database
+    # logging.info(f'Saving to database.')
+    #
+    # # Load rows data into a DataFrame
+    # df = pd.DataFrame(data)
+    #
+    # # Fix numeric type to 'amount' column
+    # df['amount'] = pd.to_numeric(df['amount'])
+    #
+    # # Save DataFrame to SQLite database
+    # df.to_sql(table, con=sql_connection, if_exists='append', index=False)
+    #
+    # page_num += 1
 
 
 def extract_data():
@@ -184,3 +197,6 @@ def extract_data():
                     table=table_name,
                     page_size=50000,
                     )
+
+    connection.close()
+

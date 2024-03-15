@@ -5,6 +5,11 @@ import boto3
 from botocore import exceptions
 import logging
 
+# SQLite Database
+import sqlite3
+import pandas as pd
+import io
+
 
 def save_file_to_s3(client, fn):
     """
@@ -15,7 +20,18 @@ def save_file_to_s3(client, fn):
     logging.info('Uploading file')
 
     try:
-        client.upload_file(fn, bucket_name, fn)
+        db_connection = sqlite3.connect('zilliqa.db')
+        query = f'SELECT * FROM {fn}'
+        df = pd.read_sql_query(query, db_connection)
+
+        bytes_io = io.BytesIO()
+        df.to_parquet(bytes_io, index=False)
+        bytes_io.seek(0)
+
+        path = f"{fn}.parquet"
+        client.put_object(Bucket=bucket_name, Key=path, Body=bytes_io)
+
+        # client.upload_file(fn, bucket_name, fn)
         logging.info(f'Successfully connected with Localstack S3')
         logging.info(f'File {fn}uploaded to bucket: {bucket_name}')
 
@@ -42,9 +58,9 @@ def load_data():
         endpoint_url='http://localstack:4566',
     )
 
-    files = ['transactions.parquet',
-             'receivers.parquet']
+    tables = ['transactions_summary',
+              'receivers_summary']
 
-    for f in files:
+    for f in tables:
         save_file_to_s3(s3, f)
 
