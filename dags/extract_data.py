@@ -57,6 +57,7 @@ def run_query(client: bigquery.Client,
               ):
     """
     Run query using Google BigQuery API.
+
     :param client: BigQuery Client object.
     :param query: Query to execute.
     :return: rows: List of dicts representing rows from the table.
@@ -82,6 +83,7 @@ def run_query(client: bigquery.Client,
 def create_db(table: str):
     """
     Create SQLite database and 'transactions' table.
+
     :param table: Name of the table inside the SQLite database.
     :return: Connection object to SQLite database.
     """
@@ -124,8 +126,6 @@ def pull_data_to_db(google_client: bigquery.Client,
     :param page_size: Number of rows to pull at a time from BigQuery.
     """
 
-    total_data = 0
-
     query = f"""
     SELECT id, block_timestamp,
     sender, to_addr,
@@ -143,6 +143,7 @@ def pull_data_to_db(google_client: bigquery.Client,
 
         # Buffer `page_size` rows at a time and insert in table
         logging.info('Start iterable')
+        total_data = 0
         for df in result.to_dataframe_iterable():
 
             # DataFrame will have at most `page_size` rows
@@ -180,4 +181,3 @@ def extract_data():
                     )
 
     connection.close()
-
