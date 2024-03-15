@@ -10,7 +10,7 @@ import sqlite3
 
 def query_transactions(sqlite_connection):
     """
-    Run summarization query and save table on SQL database.
+    Run summarization query and save table on SQLite database.
 
     Metrics with large numbers have been divided by 10^6 in order to avoid
     integer overflow but not lose any meaningful information other
@@ -52,7 +52,7 @@ def query_transactions(sqlite_connection):
 
 def query_receivers(sqlite_connection):
     """
-    Run summarization query and save table on SQL database.
+    Run summarization query and save table on SQLite database.
 
 
     Metrics with large numbers have been divided by 10^6 in order to avoid
