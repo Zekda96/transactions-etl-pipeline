@@ -17,6 +17,8 @@ from google.cloud import bigquery
 def create_api_client():
     """
     Create Google BigQuery API client.
+
+    :return: BigQuery Client used to send queries.
     """
 
     credentials_file_path = "./credentials/gcp_bigquery_credentials.json"
@@ -50,9 +52,14 @@ def create_api_client():
     return client
 
 
-def run_query(client, query):
+def run_query(client: bigquery.Client,
+              query: str
+              ):
     """
     Run query using Google BigQuery API.
+    :param client: BigQuery Client object.
+    :param query: Query to execute.
+    :return: rows: List of dicts representing rows from the table.
     """
 
     query_job = client.query(query)
@@ -76,7 +83,7 @@ def create_db(table: str):
     """
     Create SQLite database and 'transactions' table.
     :param table: Name of the table inside the SQLite database.
-    :return: sqlite3.Connection
+    :return: Connection object to SQLite database.
     """
 
     db_connection = sqlite3.connect('zilliqa.db')
@@ -99,18 +106,19 @@ def create_db(table: str):
     return db_connection
 
 
-def pull_data_to_db(s3_client: bigquery.Client,
+def pull_data_to_db(google_client: bigquery.Client,
                     sql_connection: sqlite3.Connection,
-                    table: str
+                    table: str,
+                    page_size=10000,
                     ):
     """
     Pull data using pagination and save to SQLite database.
-    :param s3_client: bigquery.Client
-    :param sql_connection: sqlite3.Connection
-    :param table:
+    :param google_client: BigQuery client to send queries.
+    :param sql_connection: Connection object to SQLite Database.
+    :param table: Name of table inside SQLite database.
+    :param page_size: Number of rows to pull at a time from BigQuery.
     """
 
-    page_size = 10000
     page_num = 0
     total_data = 0
 
@@ -133,7 +141,7 @@ def pull_data_to_db(s3_client: bigquery.Client,
 
         try:
             logging.info(f'Running query - page {page_num}')
-            data = run_query(s3_client, query)
+            data = run_query(google_client, query)
             total_data += len(data)
             logging.info(f'Ran successfully - returning {len(data)} rows'
                          f'\nTotal: {total_data}')
@@ -171,7 +179,8 @@ def extract_data():
     client = create_api_client()
 
     # Pull data using BigQuery API and save on SQLite database
-    pull_data_to_db(s3_client=client,
+    pull_data_to_db(google_client=client,
                     sql_connection=connection,
-                    table=table_name
+                    table=table_name,
+                    page_size=50000,
                     )
