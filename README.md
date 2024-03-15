@@ -105,6 +105,13 @@ transactions later than 2022-08-01, which reduces the data pulled from
 around 3 minutes, instead of the approximately 120 minutes it would take to
 load the entire dataset.
 
+In order to pull the whole dataset, line `134` from `extract_data.py` can be 
+commented out.
+```
+WHERE DATE(block_timestamp) >= DATE(2022,08,01)
+```
+
+
 
 ## Production Architecture
 Actions performed in this pipeline such as storing a file locally
