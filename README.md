@@ -76,12 +76,12 @@ S3 Bucket on http://localhost:4566/zilliqa-transactions. It should have two
 7. The container can be terminated by running `docker-compose down`.
 
 ## Dataset Breakdown
-The pipeline extracts >1M rows of data from a crypto transactions table via
+The pipeline extracts 1.3M rows of data from a crypto transactions table via
 Google BigQuery's API. The data is transformed using SQL queries that performed
 summarizations in the following form:
 ````
 Table 1
-- Daily metrics since August 2022 (ending on 2022-09-07)
+- Daily metrics (2022-08-01 to 2022-09-07)
    - Number of transactions
    - Successful transactions
    - Success rate
@@ -92,17 +92,17 @@ Table 1
 ````
 ````
 Table 2
-- All addresses ordered by most transactions received
+- All addresses ordered by most transactions received (2022-08-01 to 2022-09-07)
    - Number of transactions
    - Average cost of gas
    - Total amount received
 ````
-### - Practical Considerations
+### Practical Considerations
 The pipeline is capable of handling the load of the entire database from BigQuery, however,
 for the purpose of this project, it has been reduced to all recorded 
 transactions later than 2022-08-01, which reduces the data pulled from
 41M rows to 1.3M rows. This allows the 'extract_data' task to run in
-around 3 minutes, instead of the approximate 120 minutes it would take to
+around 3 minutes, instead of the approximately 120 minutes it would take to
 load the entire dataset.
 
 
@@ -116,4 +116,3 @@ Data Warehouses (Redshift, Databricks, Google BigQuery) and serverless
 FaaS (AWS Lambda, Google Cloud Functions).
 
 ![High-level diagram of production architecture](readme/architecture_diagram.png)
-
