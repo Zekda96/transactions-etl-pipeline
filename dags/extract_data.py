@@ -21,7 +21,6 @@ def create_api_client():
     :return: BigQuery Client used to send queries.
     """
 
-    # credentials_file_path = "airflow/transactions-etl/credentials/gcp_bigquery_credentials.json"
     credentials_file_path = "./credentials/gcp_bigquery_credentials.json"
 
     # Read credentials file
@@ -116,18 +115,16 @@ def pull_data_to_db(google_client: bigquery.Client,
                     ):
     """
     Pull data using pagination and save to SQLite database.
+    This reduces memory usage by only loading `page_size` rows at a time and
+    afterwards data can be efficiently transformed using SQL queries.
+
     :param google_client: BigQuery client to send queries.
     :param sql_connection: Connection object to SQLite Database.
     :param table: Name of table inside SQLite database.
     :param page_size: Number of rows to pull at a time from BigQuery.
     """
 
-    page_num = 0
     total_data = 0
-
-    # Load data using pagination and insert each page to SQLite database.
-    # This reduces memory usage by only loading `page_size` rows at a time and
-    # then data can be efficiently transformed using SQL queries.
 
     query = f"""
     SELECT id, block_timestamp,
@@ -136,50 +133,34 @@ def pull_data_to_db(google_client: bigquery.Client,
     amount, success,
     FROM public-data-finance.crypto_zilliqa.transactions
     WHERE DATE(block_timestamp) >= DATE(2022,08,01)
-    --WHERE DATE(block_timestamp) >= DATE(2022,09,07)
     """
 
     try:
-        print(f'Running query - page {page_num}')
-        logging.info(f'Running query - page {page_num}')
-        # data = run_query(google_client, query)
-
-        print('job=client.query(query')
+        # Run query
+        logging.info(f'Running query:\n{query}')
         job = google_client.query(query)
-
-        print(f'result = job.result(page_size={page_size})')
         result = job.result(page_size=page_size)
-        print('Start iterable')
+
+        # Buffer `page_size` rows at a time and insert in table
+        logging.info('Start iterable')
         for df in result.to_dataframe_iterable():
-            # df will have at most `page_size` rows
+
+            # DataFrame will have at most `page_size` rows
             total_data += len(df)
             logging.info(f'Ran successfully - returning {len(df)} rows'
                          f'\nTotal: {total_data}')
-            print(f'Ran successfully - returning {len(df)} rows'
-                  f'\nTotal: {total_data}')
 
+            # Set datatype to numeric
             df['amount'] = pd.to_numeric(df['amount'])
 
-            # Save DataFrame to SQLite database
+            # Insert DataFrame in a SQLite database
+            logging.info(f'Saving to database.')
             df.to_sql(table, con=sql_connection, if_exists='append',
                       index=False)
-    except Exception as e:
-        logging.error(f'Error in query.')
-        raise e
 
-    # # Insert data into a SQLite database
-    # logging.info(f'Saving to database.')
-    #
-    # # Load rows data into a DataFrame
-    # df = pd.DataFrame(data)
-    #
-    # # Fix numeric type to 'amount' column
-    # df['amount'] = pd.to_numeric(df['amount'])
-    #
-    # # Save DataFrame to SQLite database
-    # df.to_sql(table, con=sql_connection, if_exists='append', index=False)
-    #
-    # page_num += 1
+    except Exception as e:
+        logging.error(f'Error in extraction.')
+        raise e
 
 
 def extract_data():
