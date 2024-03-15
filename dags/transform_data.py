@@ -1,54 +1,22 @@
 # Logging
 import logging
-import google.api_core.exceptions
 
 # Data Manipulation
-import json
 import pandas as pd
 
 # SQL Database
 import sqlite3
 
 
-def create_tables(sqlite_connection):
-
-    cursor = sqlite_connection.cursor()
-
-    query = f"""
-    CREATE TABLE transactions_summary (
-    date DATETIME PRIMARY KEY,
-    num_transactions NUMERIC,
-    successful_transactions NUMERIC,
-    success_rate NUMERIC,
-    distinct_sender NUMERIC,
-    distinct_receiver NUMERIC,
-    avg_gas_price_in_millions NUMERIC,
-    avg_amount_in_millions NUMERIC
-    );
-    """
-    cursor.execute(query)
-
-    query = f"""
-    CREATE TABLE receivers_summary (
-    receiver TEXT PRIMARY KEY,
-    num_transactions NUMERIC,
-    avg_gas_in_millions NUMERIC,
-    received_in_millions NUMERIC
-    );
-    """
-    cursor.execute(query)
-
-    cursor.close()
-
-
 def query_transactions(sqlite_connection):
     """
-    Run query and save file locally.\n
-    Query and Transformation #1: Summarization of daily transactions.
+    Run summarization query and save table on SQL database.
 
-    Metrics with large numbers have been reduced by 10^6 in order to avoid
+    Metrics with large numbers have been divided by 10^6 in order to avoid
     integer overflow but not lose any meaningful information other
     processes may need down the line.
+
+    :param sqlite_connection: Connection object to SQLite database.
     """
 
     # SQL Query for summarization.
@@ -66,30 +34,35 @@ def query_transactions(sqlite_connection):
     GROUP BY date
     ORDER BY date DESC
     """
+
     logging.info(f'Sending query:\n{query}')
 
     df = pd.read_sql_query(query, sqlite_connection)
 
-    # Save file
+    # Save table
     table_name = 'transactions_summary'
-    df.to_sql(table_name, con=sqlite_connection, if_exists='append', index=False)
-    # df.to_parquet(f'{fn}.parquet', compression='gzip')
-    # logging.info(f'Transformed data saved on ./{fn}.parquet')
+    df.to_sql(table_name,
+              con=sqlite_connection,
+              if_exists='append',
+              index=False
+              )
+
+    logging.info(f'Transformed data saved on table {table_name}')
 
 
 def query_receivers(sqlite_connection):
     """
-    Run query and save file locally.\n
-    Query and Transformation #2: Summarization of receiver addresses during
-    August-2022.
+    Run summarization query and save table on SQL database.
 
-    Metrics with large numbers have been reduced by 10^6 in order to avoid
+
+    Metrics with large numbers have been divided by 10^6 in order to avoid
     integer overflow but not lose any meaningful information other
     processes may need down the line.
+
+    :param sqlite_connection: Connection object to SQLite database.
     """
 
     # SQL Query for summarization.
-
     query = f"""
     SELECT
         to_addr as receiver,
@@ -101,25 +74,34 @@ def query_receivers(sqlite_connection):
     ORDER BY num_transactions DESC
     """
 
+    logging.info(f'Sending query:\n{query}')
+
     df = pd.read_sql_query(query, sqlite_connection)
-    # print(df.head())
 
-    # Save file
+    # Save table
     table_name = 'receivers_summary'
-    df.to_sql(table_name, con=sqlite_connection, if_exists='append',
-              index=False)
+    df.to_sql(table_name,
+              con=sqlite_connection,
+              if_exists='append',
+              index=False
+              )
 
-    # fn = 'receivers'
-    # df.to_parquet(f'{fn}.parquet', compression='gzip')
-    # logging.info(f'Transformed data saved on ./{fn}.parquet')
+    logging.info(f'Transformed data saved on table {table_name}')
 
 
 def transform_data():
+    """
+    Create new tables using SQL summarization and store them on SQLite database.
+    """
+
+    # Start connection
     db_connection = sqlite3.connect('zilliqa.db')
 
-    # create_tables(db_connection)
-
+    # Summarization #1: Daily metrics since August 2022 (ending on 2022-09-07)
     query_transactions(db_connection)
+
+    # Summarization #2: All addresses ordered by most transactions received
     query_receivers(db_connection)
 
+    # End connection
     db_connection.close()
