@@ -6,6 +6,9 @@ import google.api_core.exceptions
 import json
 import pandas as pd
 
+# SQL Database
+import sqlite3
+
 # Cloud storage
 from google.oauth2 import service_account
 from google.cloud import bigquery
@@ -69,85 +72,106 @@ def run_query(client, query):
     return rows
 
 
-def save_data_as_parquet(dataframe, filename):
+def create_db(table: str):
     """
-    Save pandas DataFrame as parquet.
-    """
-
-    dataframe.to_parquet(f'{filename}.parquet', compression='gzip')
-    logging.info(f'Retrieved data saved on ./{filename}.parquet')
-
-
-def query_transactions(s3_client):
-    """
-    Run query and save file locally.\n
-    Query and Transformation #1: Summarization of August-2022 transactions.
+    Create SQLite database and 'transactions' table.
+    :param table: Name of the table inside the SQLite database.
+    :return: sqlite3.Connection
     """
 
-    # SQL Query with pagination and summarizations.
-    query = """
-    SELECT
-        DATE(block_timestamp) as date,
-        COUNT(id) as num_transactions,
-        SUM(CASE WHEN success=TRUE THEN 1 ELSE 0 END) as successful_transactions,
-        ROUND(SUM(CASE WHEN success=TRUE THEN 1 ELSE 0 END) / COUNT(id), 4) as success_rate,
-        COUNT(distinct sender) as distinct_sender,
-        COUNT(distinct to_addr) as distinct_receivers,
-        ROUND(AVG(gas_limit * gas_price)/POWER(10, 12), 3) as avg_gas_price_in_billions,
-        ROUND(AVG(amount)/POWER(10, 12), 3) as avg_amount_in_billions,
-    FROM public-data-finance.crypto_zilliqa.transactions
-    WHERE DATE(block_timestamp) >= DATE(2022,08,01)
-    AND DATE(block_timestamp) < DATE(2022,09,01)
-    GROUP BY date
-    ORDER BY date DESC
-    LIMIT 31;
-    """
+    db_connection = sqlite3.connect('zilliqa.db')
 
-    data = run_query(s3_client, query)
-    df = pd.DataFrame(data)
-
-    # Set data type of date column
-    df['date'] = pd.to_datetime(df['date'])
-
-    fn = 'transactions'
-    save_data_as_parquet(dataframe=df, filename=fn)
-
-
-def query_receivers(s3_client):
-    """
-    Run query and save file locally.\n
-    Query and Transformation #2: Summarization of receiver addresses during
-    August-2022.
-    """
-
-    # SQL Query with pagination and summarization.
+    cursor = db_connection.cursor()
     query = f"""
-    SELECT
-      to_addr as receiver,
-      COUNT(id) as transactions_no,
-      ROUND(AVG(gas_limit * gas_price)/power(10, 12), 4) as avg_gas_in_billions,
-      ROUND(SUM(amount)/power(10, 12), 3) as received_in_billions,
-    FROM `public-data-finance.crypto_zilliqa.transactions`
-    WHERE DATE(block_timestamp) >= DATE(2021,08,01)
-    AND DATE(block_timestamp) < DATE(2021,09,01)
-    AND success=true
-    GROUP BY receiver
-    ORDER BY transactions_no DESC
-    LIMIT 20;
+
+    CREATE TABLE {table} (
+    id TEXT PRIMARY KEY,
+    block_timestamp DATETIME,
+    sender TEXT,
+    to_addr TEXT,
+    gas_limit NUMERIC,
+    gas_price NUMERIC,
+    amount NUMERIC,
+    success INTEGER
+    );
+    """
+    cursor.execute(query)
+    return db_connection
+
+
+def pull_data_to_db(s3_client: bigquery.Client,
+                    sql_connection: sqlite3.Connection,
+                    table: str
+                    ):
+    """
+    Pull data using pagination and save to SQLite database.
+    :param s3_client: bigquery.Client
+    :param sql_connection: sqlite3.Connection
+    :param table:
     """
 
-    data = run_query(s3_client, query)
-    df = pd.DataFrame(data)
+    page_size = 10000
+    page_num = 0
+    total_data = 0
 
-    fn = 'receivers'
-    save_data_as_parquet(dataframe=df, filename=fn)
+    # Load data using pagination and insert each page to SQLite database.
+    # This reduces memory usage by only loading `page_size` rows at a time and
+    # then data can be efficiently transformed using SQL queries.
+
+    while True:
+
+        query = f"""
+        SELECT id, block_timestamp,
+        sender, to_addr,
+        gas_limit, gas_price,
+        amount, success
+        FROM public-data-finance.crypto_zilliqa.transactions
+        WHERE DATE(block_timestamp) >= DATE(2022,09,07)
+        LIMIT {page_size}
+        OFFSET {page_num * page_size};
+        """
+
+        try:
+            logging.info(f'Running query - page {page_num}')
+            data = run_query(s3_client, query)
+            total_data += len(data)
+            logging.info(f'Ran successfully - returning {len(data)} rows'
+                         f'\nTotal: {total_data}')
+
+        except Exception as e:
+            logging.error(f'Error in query.')
+            raise e
+
+        if not data:
+            logging.info(f'Query returned empty list. Ending extraction.')
+            break
+
+        # Insert data into a SQLite database
+        logging.info(f'Saving to database.')
+
+        # Load rows data into a DataFrame
+        df = pd.DataFrame(data)
+
+        # Fix numeric type to 'amount' column
+        df['amount'] = pd.to_numeric(df['amount'])
+
+        # Save DataFrame to SQLite database
+        df.to_sql(table, con=sql_connection, if_exists='append', index=False)
+
+        page_num += 1
 
 
-def query_data():
+def extract_data():
 
-    # Create file
+    # Create SQLite database
+    table_name = 'transactions'
+    connection = create_db(table=table_name)
+
+    # Connect to BigQuery API
     client = create_api_client()
 
-    # Run queries and save file locally
-    query_transactions(client)
-    query_receivers(client)
+    # Pull data using BigQuery API and save on SQLite database
+    pull_data_to_db(s3_client=client,
+                    sql_connection=connection,
+                    table=table_name
+                    )
